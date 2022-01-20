@@ -15,14 +15,16 @@ edition = "2018"
 ################################# Dependencies ################################
 
 [dependencies]
-ark-ff = { version = "^0.3.0", default-features = false }
-ark-ec = { version = "^0.3.0", default-features = false }
-ark-serialize = { version = "^0.3.0", default-features = false, features = [ "derive" ] }
-ark-poly = { version = "^0.3.0", default-features = false }
-ark-std = { version = "^0.3.0", default-features = false }
-ark-relations = { version = "^0.3.0", default-features = false }
-ark-crypto-primitives = { version = "^0.3.0", default-features = false }
-ark-r1cs-std = { version = "^0.3.0", default-features = false, optional = true }
+ark-ff = {git = "https://github.com/SRI-CSL/algebra", branch = "v3_sri", default-features=false, features=["asm","parallel"] }
+ark-ec = {git = "https://github.com/SRI-CSL/algebra", branch = "v3_sri", default-features=false }
+ark-serialize = {git = "https://github.com/SRI-CSL/algebra", branch = "v3_sri",  default-features=false , features = ["derive"] } 
+
+ark-poly = {git = "https://github.com/SRI-CSL/algebra", branch = "v3_sri", default-features=false }
+ark-std = {version = "0.2.1-alpha.0", git = "https://github.com/SRI-CSL/utils", default-features = false}
+ark-relations = {git = "https://github.com/SRI-CSL/snark", branch = "v3_sri", default-features=false }
+ark-crypto-primitives = {git = "https://github.com/SRI-CSL/crypto-primitives", branch = "new", default-features=false }
+ark-r1cs-std = {git = "https://github.com/SRI-CSL/r1cs-std", branch = "v3_sri",  default-features=false, optional = true } 
+
 
 tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
 derivative = { version = "2.0", features = ["use_core"], optional = true}
@@ -31,13 +33,17 @@ rayon = { version = "1", optional = true }
 
 [dev-dependencies]
 csv = { version = "1" }
-ark-bls12-381 = { version = "^0.3.0", default-features = false, features = ["curve"] }
-ark-bls12-377 = { version = "^0.3.0", default-features = false, features = ["curve"] }
-ark-cp6-782 = { version = "^0.3.0", default-features = false }
-ark-mnt4-298 = { version = "^0.3.0", default-features = false, features = ["r1cs", "curve"] }
-ark-mnt6-298 = { version = "^0.3.0", default-features = false, features = ["r1cs"] }
-ark-mnt4-753 = { version = "^0.3.0", default-features = false, features = ["r1cs", "curve"] }
-ark-mnt6-753 = { version = "^0.3.0", default-features = false, features = ["r1cs"] }
+ark-ed-on-bls12-381 =  { git = "https://github.com/SRI-CSL/curves", default-features = false, features = [ "r1cs" ], branch = "v3_sri" }
+ark-bls12-377 = { git = "https://github.com/SRI-CSL/curves", default-features = false, features = [ "r1cs" ], branch = "v3_sri" }
+
+ark-cp6-782 = { git = "https://github.com/SRI-CSL/curves", default-features = false, branch = "v3_sri" }
+
+ark-mnt4-298 = { git = "https://github.com/SRI-CSL/curves", default-features = false, features = [ "r1cs" ], branch = "v3_sri" }
+ark-mnt6-298 = { git = "https://github.com/SRI-CSL/curves", default-features = false, features = [ "r1cs" ], branch = "v3_sri" }
+
+ark-mnt4-753 = { git = "https://github.com/SRI-CSL/curves", default-features = false, features = [ "r1cs" ], branch = "v3_sri" }
+ark-mnt6-753 =  { git = "https://github.com/SRI-CSL/curves", default-features = false, features = [ "r1cs" ], branch = "v3_sri" }
+
 
 [profile.release]
 opt-level = 3
