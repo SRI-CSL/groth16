@@ -126,7 +126,7 @@ where
 
     let domain_size = cs.num_constraints() + cs.num_instance_variables();
     let domain = D::new(domain_size).ok_or(SynthesisError::PolynomialDegreeTooLarge)?;
-    let t = domain.sample_element_outside_domain(rng);
+    let t = domain.sample_element_outside_domain(rng,false);
 
     end_timer!(domain_time);
     ///////////////////////////////////////////////////////////////////////////
