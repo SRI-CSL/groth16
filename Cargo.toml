@@ -26,7 +26,7 @@ ark-crypto-primitives = {git = "https://github.com/SRI-CSL/crypto-primitives", b
 ark-r1cs-std = {git = "https://github.com/SRI-CSL/r1cs-std", branch = "v3_sri",  default-features=false, optional = true } 
 
 mpc-algebra = {  git= "https://github.com/SRI-CSL/mpc-algebra" }
-mpc-trait = { path = "https://github.com/SRI-CSL/mpc-trait" }
+mpc-trait = { git = "https://github.com/SRI-CSL/mpc-trait" }
 
 tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
 derivative = { version = "2.0", features = ["use_core"], optional = true}
