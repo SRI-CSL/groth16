@@ -1,7 +1,4 @@
-use crate::{
-    r1cs_to_qap::{LibsnarkReduction, R1CStoQAP},
-    ProvingKey, Vec, VerifyingKey,
-};
+use crate::{r1cs_to_qap::R1CStoQAP, ProvingKey, Vec, VerifyingKey};
 use ark_ec::{msm::FixedBaseMSM, PairingEngine, ProjectiveCurve};
 use ark_ff::{Field, PrimeField, UniformRand, Zero};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
@@ -15,95 +12,36 @@ use ark_std::{cfg_into_iter, cfg_iter};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-#[inline]
 /// Generates a random common reference string for
 /// a circuit.
+#[inline]
 pub fn generate_random_parameters<E, C, R>(circuit: C, rng: &mut R) -> R1CSResult<ProvingKey<E>>
 where
     E: PairingEngine,
     C: ConstraintSynthesizer<E::Fr>,
     R: Rng,
 {
-    generate_random_parameters_with_reduction::<E, C, R, LibsnarkReduction>(circuit, rng)
-}
-
-/// Generates a random common reference string for
-/// a circuit using the provided R1CS-to-QAP reduction.
-#[inline]
-pub fn generate_random_parameters_with_reduction<E, C, R, QAP>(
-    circuit: C,
-    rng: &mut R,
-) -> R1CSResult<ProvingKey<E>>
-where
-    E: PairingEngine,
-    C: ConstraintSynthesizer<E::Fr>,
-    R: Rng,
-    QAP: R1CStoQAP,
-{
     let alpha = E::Fr::rand(rng);
     let beta = E::Fr::rand(rng);
     let gamma = E::Fr::rand(rng);
     let delta = E::Fr::rand(rng);
 
-    let g1_generator = E::G1Projective::rand(rng);
-    let g2_generator = E::G2Projective::rand(rng);
-
-    generate_parameters_with_qap::<E, C, R, QAP>(
-        circuit,
-        alpha,
-        beta,
-        gamma,
-        delta,
-        g1_generator,
-        g2_generator,
-        rng,
-    )
+    generate_parameters::<E, C, R>(circuit, alpha, beta, gamma, delta, rng)
 }
 
-/// Create parameters for a circuit, given some toxic waste, and group generators
+/// Create parameters for a circuit, given some toxic waste.
 pub fn generate_parameters<E, C, R>(
     circuit: C,
     alpha: E::Fr,
     beta: E::Fr,
     gamma: E::Fr,
     delta: E::Fr,
-    g1_generator: E::G1Projective,
-    g2_generator: E::G2Projective,
     rng: &mut R,
 ) -> R1CSResult<ProvingKey<E>>
 where
     E: PairingEngine,
     C: ConstraintSynthesizer<E::Fr>,
     R: Rng,
-{
-    generate_parameters_with_qap::<E, C, R, LibsnarkReduction>(
-        circuit,
-        alpha,
-        beta,
-        gamma,
-        delta,
-        g1_generator,
-        g2_generator,
-        rng,
-    )
-}
-
-/// Create parameters for a circuit, given some toxic waste, R1CS to QAP calculator and group generators
-pub fn generate_parameters_with_qap<E, C, R, QAP>(
-    circuit: C,
-    alpha: E::Fr,
-    beta: E::Fr,
-    gamma: E::Fr,
-    delta: E::Fr,
-    g1_generator: E::G1Projective,
-    g2_generator: E::G2Projective,
-    rng: &mut R,
-) -> R1CSResult<ProvingKey<E>>
-where
-    E: PairingEngine,
-    C: ConstraintSynthesizer<E::Fr>,
-    R: Rng,
-    QAP: R1CStoQAP,
 {
     type D<F> = GeneralEvaluationDomain<F>;
 
@@ -126,7 +64,7 @@ where
 
     let domain_size = cs.num_constraints() + cs.num_instance_variables();
     let domain = D::new(domain_size).ok_or(SynthesisError::PolynomialDegreeTooLarge)?;
-    let t = domain.sample_element_outside_domain(rng,false);
+    let t = domain.sample_element_outside_domain(rng, false);
 
     end_timer!(domain_time);
     ///////////////////////////////////////////////////////////////////////////
@@ -134,7 +72,7 @@ where
     let reduction_time = start_timer!(|| "R1CS to QAP Instance Map with Evaluation");
     let num_instance_variables = cs.num_instance_variables();
     let (a, b, c, zt, qap_num_variables, m_raw) =
-        QAP::instance_map_with_evaluation::<E::Fr, D<E::Fr>>(cs, &t)?;
+        R1CStoQAP::instance_map_with_evaluation::<E::Fr, D<E::Fr>>(cs, &t)?;
     end_timer!(reduction_time);
 
     // Compute query densities
@@ -165,6 +103,9 @@ where
 
     drop(c);
 
+    let g1_generator = E::G1Projective::rand(rng);
+    let g2_generator = E::G2Projective::rand(rng);
+
     // Compute B window table
     let g2_time = start_timer!(|| "Compute G2 table");
     let g2_window = FixedBaseMSM::get_mul_window_size(non_zero_b);
@@ -190,11 +131,11 @@ where
     // Generate the R1CS proving key
     let proving_key_time = start_timer!(|| "Generate the R1CS proving key");
 
-    let alpha_g1 = g1_generator.mul(&alpha.into_repr());
-    let beta_g1 = g1_generator.mul(&beta.into_repr());
-    let beta_g2 = g2_generator.mul(&beta.into_repr());
-    let delta_g1 = g1_generator.mul(&delta.into_repr());
-    let delta_g2 = g2_generator.mul(&delta.into_repr());
+    let alpha_g1 = g1_generator.scalar_mul(&alpha);
+    let beta_g1 = g1_generator.scalar_mul(&beta);
+    let beta_g2 = g2_generator.scalar_mul(&beta);
+    let delta_g1 = g1_generator.scalar_mul(&delta);
+    let delta_g2 = g2_generator.scalar_mul(&delta);
 
     // Compute the A-query
     let a_time = start_timer!(|| "Calculate A");
@@ -216,7 +157,9 @@ where
         scalar_bits,
         g1_window,
         &g1_table,
-        &QAP::h_query_scalars::<_, D<E::Fr>>(m_raw - 1, t, zt, delta_inverse)?,
+        &cfg_into_iter!(0..m_raw - 1)
+            .map(|i| zt * &delta_inverse * &t.pow([i as u64]))
+            .collect::<Vec<_>>(),
     );
 
     end_timer!(h_time);
@@ -236,7 +179,7 @@ where
 
     // Generate R1CS verification key
     let verifying_key_time = start_timer!(|| "Generate the R1CS verification key");
-    let gamma_g2 = g2_generator.mul(&gamma.into_repr());
+    let gamma_g2 = g2_generator.scalar_mul(&gamma);
     let gamma_abc_g1 = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
         scalar_bits,
         g1_window,

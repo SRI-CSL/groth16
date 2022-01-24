@@ -1,12 +1,13 @@
 use crate::{
-    create_random_proof, generate_random_parameters, prepare_verifying_key, rerandomize_proof,
-    verify_proof,
+    create_random_proof, generate_random_parameters, prepare_verifying_key,
+    rerandomize_proof, verify_proof
 };
 use ark_ec::PairingEngine;
 use ark_ff::UniformRand;
 use ark_std::test_rng;
 
 use core::ops::MulAssign;
+
 
 use ark_ff::{Field, Zero};
 use ark_relations::{
@@ -44,6 +45,35 @@ impl<ConstraintF: Field> ConstraintSynthesizer<ConstraintF> for MySillyCircuit<C
         Ok(())
     }
 }
+
+// struct MpcSynth<C>(C);
+// 
+// impl<C> ConstraintSynthesizer<mpc::MpcVal<ark_bls12_377::Fr>> for MpcSynth<C>
+// where C: ConstraintSynthesizer<ark_bls12_377::Fr> {
+//     fn generate_constraints(
+//         self,
+//         cs: ConstraintSystemRef<ConstraintF>,
+//     ) -> Result<(), SynthesisError> {
+//         let a = cs.new_witness_variable(|| self.a.ok_or(SynthesisError::AssignmentMissing))?;
+//         let b = cs.new_witness_variable(|| self.b.ok_or(SynthesisError::AssignmentMissing))?;
+//         let c = cs.new_input_variable(|| {
+//             let mut a = self.a.ok_or(SynthesisError::AssignmentMissing)?;
+//             let b = self.b.ok_or(SynthesisError::AssignmentMissing)?;
+// 
+//             a.mul_assign(&b);
+//             Ok(a)
+//         })?;
+// 
+//         cs.enforce_constraint(lc!() + a, lc!() + b, lc!() + c)?;
+//         cs.enforce_constraint(lc!() + a, lc!() + b, lc!() + c)?;
+//         cs.enforce_constraint(lc!() + a, lc!() + b, lc!() + c)?;
+//         cs.enforce_constraint(lc!() + a, lc!() + b, lc!() + c)?;
+//         cs.enforce_constraint(lc!() + a, lc!() + b, lc!() + c)?;
+//         cs.enforce_constraint(lc!() + a, lc!() + b, lc!() + c)?;
+// 
+//         Ok(())
+//     }
+// }
 
 fn test_prove_and_verify<E>(n_iters: usize)
 where
@@ -114,7 +144,8 @@ where
     assert!(verify_proof(&pvk, &proof2, &[c]).unwrap());
     assert!(verify_proof(&pvk, &proof3, &[c]).unwrap());
 
-    // Check soundness: a rerandomized proof fails to validate when the original fails to validate
+    // Check soundness: a rerandomized proof fails to validate when the original
+    // fails to validate
     assert!(!verify_proof(&pvk, &proof1, &[E::Fr::zero()]).unwrap());
     assert!(!verify_proof(&pvk, &proof2, &[E::Fr::zero()]).unwrap());
     assert!(!verify_proof(&pvk, &proof3, &[E::Fr::zero()]).unwrap());

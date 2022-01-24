@@ -37,7 +37,6 @@ impl<E: PairingEngine> Default for Proof<E> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 
 /// A verification key in the Groth16 SNARK.
 #[derive(Clone, Debug, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
@@ -127,7 +126,6 @@ impl<E: PairingEngine> ToBytes for PreparedVerifyingKey<E> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 
 /// The prover key for for the Groth16 zkSNARK.
 #[derive(Clone, Debug, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
@@ -149,3 +147,4 @@ pub struct ProvingKey<E: PairingEngine> {
     /// The elements `l_i * G` in `E::G1`.
     pub l_query: Vec<E::G1Affine>,
 }
+

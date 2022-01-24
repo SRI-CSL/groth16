@@ -6,6 +6,7 @@ use super::{PreparedVerifyingKey, Proof, VerifyingKey};
 use ark_relations::r1cs::{Result as R1CSResult, SynthesisError};
 
 use core::ops::{AddAssign, Neg};
+use ark_std::ops::MulAssign;
 
 /// Prepare the verifying key `vk` for use in proof verification.
 pub fn prepare_verifying_key<E: PairingEngine>(vk: &VerifyingKey<E>) -> PreparedVerifyingKey<E> {
@@ -17,12 +18,13 @@ pub fn prepare_verifying_key<E: PairingEngine>(vk: &VerifyingKey<E>) -> Prepared
     }
 }
 
-/// Prepare proof inputs for use with [`verify_proof_with_prepared_inputs`], wrt the prepared
-/// verification key `pvk` and instance public inputs.
-pub fn prepare_inputs<E: PairingEngine>(
+/// Verify a Groth16 proof `proof` against the prepared verification key `pvk`,
+/// with respect to the instance `public_inputs`.
+pub fn verify_proof<E: PairingEngine>(
     pvk: &PreparedVerifyingKey<E>,
+    proof: &Proof<E>,
     public_inputs: &[E::Fr],
-) -> R1CSResult<E::G1Projective> {
+) -> R1CSResult<bool> {
     if (public_inputs.len() + 1) != pvk.vk.gamma_abc_g1.len() {
         return Err(SynthesisError::MalformedVerifyingKey);
     }
@@ -32,41 +34,25 @@ pub fn prepare_inputs<E: PairingEngine>(
         g_ic.add_assign(&b.mul(i.into_repr()));
     }
 
-    Ok(g_ic)
-}
+    let mut test2 = E::pairing(proof.a, proof.b);
+    test2.mul_assign(E::pairing(g_ic.into_affine(), pvk.vk.gamma_g2.neg()));
+    test2.mul_assign(E::pairing(proof.c, pvk.vk.delta_g2.neg()));
 
-/// Verify a Groth16 proof `proof` against the prepared verification key `pvk` and prepared public
-/// inputs. This should be preferred over [`verify_proof`] if the instance's public inputs are
-/// known in advance.
-pub fn verify_proof_with_prepared_inputs<E: PairingEngine>(
-    pvk: &PreparedVerifyingKey<E>,
-    proof: &Proof<E>,
-    prepared_inputs: &E::G1Projective,
-) -> R1CSResult<bool> {
-    let qap = E::miller_loop(
-        [
-            (proof.a.into(), proof.b.into()),
-            (
-                prepared_inputs.into_affine().into(),
-                pvk.gamma_g2_neg_pc.clone(),
-            ),
-            (proof.c.into(), pvk.delta_g2_neg_pc.clone()),
-        ]
-        .iter(),
-    );
+//    assert_eq!(E::pairing(proof.a, proof.b), E::final_exponentiation(&E::miller_loop([(proof.a.into(), proof.b.into())].iter())).unwrap());
+//    assert_eq!(E::pairing(g_ic.into_affine(), pvk.vk.gamma_g2.neg()), E::final_exponentiation(&E::miller_loop([(g_ic.into_affine().into(), pvk.gamma_g2_neg_pc.clone())].iter())).unwrap());
+//    assert_eq!(E::pairing(proof.c, pvk.vk.delta_g2.neg()), E::final_exponentiation(&E::miller_loop([(proof.c.into(), pvk.delta_g2_neg_pc.clone())].iter())).unwrap());
+//
+//    let qap = E::miller_loop(
+//        [
+//            (proof.a.into(), proof.b.into()),
+//            (g_ic.into_affine().into(), pvk.gamma_g2_neg_pc.clone()),
+//            (proof.c.into(), pvk.delta_g2_neg_pc.clone()),
+//        ]
+//        .iter(),
+//    );
+//
+//    let test = E::final_exponentiation(&qap).ok_or(SynthesisError::UnexpectedIdentity)?;
 
-    let test = E::final_exponentiation(&qap).ok_or(SynthesisError::UnexpectedIdentity)?;
-
-    Ok(test == pvk.alpha_g1_beta_g2)
-}
-
-/// Verify a Groth16 proof `proof` against the prepared verification key `pvk`,
-/// with respect to the instance `public_inputs`.
-pub fn verify_proof<E: PairingEngine>(
-    pvk: &PreparedVerifyingKey<E>,
-    proof: &Proof<E>,
-    public_inputs: &[E::Fr],
-) -> R1CSResult<bool> {
-    let prepared_inputs = prepare_inputs(pvk, public_inputs)?;
-    verify_proof_with_prepared_inputs(pvk, proof, &prepared_inputs)
+//    assert_eq!(test, test2);
+    Ok(test2 == pvk.alpha_g1_beta_g2)
 }
